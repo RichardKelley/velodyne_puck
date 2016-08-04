@@ -33,11 +33,14 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
+// RCK image types
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+
 #include <velodyne_puck_msgs/VelodynePuckPacket.h>
 #include <velodyne_puck_msgs/VelodynePuckPoint.h>
 #include <velodyne_puck_msgs/VelodynePuckScan.h>
 #include <velodyne_puck_msgs/VelodynePuckSweep.h>
-
 
 namespace velodyne_puck_decoder {
 
@@ -163,6 +166,9 @@ private:
   // Publish data
   void publishPointCloud();
 
+  // RCK - publish intensity image
+  void publishReflectivityImage();
+  
   // Check if a point is in the required range.
   bool isPointInRange(const double& distance) {
     return (distance >= min_range && distance <= max_range);
@@ -203,6 +209,11 @@ private:
   ros::Publisher sweep_pub;
   ros::Publisher point_cloud_pub;
 
+  // RCK - intensity image publisher
+  image_transport::ImageTransport it;
+  image_transport::Publisher reflectivity_image_pub;
+
+  
 };
 
 typedef VelodynePuckDecoder::VelodynePuckDecoderPtr VelodynePuckDecoderPtr;

@@ -29,6 +29,7 @@ VelodynePuckDecoder::VelodynePuckDecoder(
   last_azimuth(0.0),
   sweep_start_time(0.0),
   packet_start_time(0.0),
+  it(n), // RCK
   sweep_data(new velodyne_puck_msgs::VelodynePuckSweep()){
   return;
 }
@@ -51,7 +52,14 @@ bool VelodynePuckDecoder::createRosIO() {
       "velodyne_sweep", 10);
   point_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(
       "velodyne_point_cloud", 10);
+
+  // RCK
+  reflectivity_image_pub = it.advertise("velodyne/reflectivity_image", 10);
+  
+  
   return true;
+
+
 }
 
 bool VelodynePuckDecoder::initialize() {
@@ -112,13 +120,33 @@ void VelodynePuckDecoder::publishPointCloud() {
       ++point_cloud->width;
     }
   }
-
+  
   point_cloud_pub.publish(point_cloud);
-  //sweep_pub.publish(sweep_data);
-
   return;
 }
 
+// RCK
+void VelodynePuckDecoder::publishReflectivityImage() {
+
+  cv::Mat reflectivity_img = cv::Mat(16, 360, CV_8UC1, 0.0);
+  
+  
+  for (size_t i = 1; i <= 16; ++i) {
+    const velodyne_puck_msgs::VelodynePuckScan& scan = sweep_data->scans[i-1];
+    for (size_t j = 0; j < scan.points.size(); ++j) {
+      int k = (int)(scan.points[j].azimuth * RAD_TO_DEG);
+      reflectivity_img.at<char>(16 - i,(k + 180) % 360) = scan.points[j].intensity;
+    }
+  }
+  
+  sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono8",
+						 reflectivity_img).toImageMsg();
+  msg->header.frame_id = child_frame_id;
+  reflectivity_image_pub.publish(msg);
+  
+  return;
+}
+  
 void VelodynePuckDecoder::decodePacket(const RawPacket* packet) {
 
   // Compute the azimuth angle for each firing.
@@ -290,7 +318,11 @@ void VelodynePuckDecoder::packetCallback(
     // Publish the last revolution
     sweep_data->header.stamp = ros::Time(sweep_start_time);
     sweep_pub.publish(sweep_data);
-    if (publish_point_cloud) publishPointCloud();
+    if (publish_point_cloud) {
+      publishPointCloud();
+      publishReflectivityImage(); // RCK
+    }
+    
     sweep_data = velodyne_puck_msgs::VelodynePuckSweepPtr(
         new velodyne_puck_msgs::VelodynePuckSweep());
 
