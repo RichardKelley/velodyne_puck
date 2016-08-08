@@ -168,6 +168,9 @@ private:
 
   // RCK - publish intensity image
   void publishReflectivityImage();
+
+  // RCK - publish depth image
+  void publishDepthImage();
   
   // Check if a point is in the required range.
   bool isPointInRange(const double& distance) {
@@ -212,7 +215,7 @@ private:
   // RCK - intensity image publisher
   image_transport::ImageTransport it;
   image_transport::Publisher reflectivity_image_pub;
-
+  image_transport::Publisher depth_image_pub;
   
 };
 

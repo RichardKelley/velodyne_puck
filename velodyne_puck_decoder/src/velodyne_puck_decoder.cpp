@@ -17,7 +17,11 @@
 
 #include <velodyne_puck_decoder/velodyne_puck_decoder.h>
 
+#include <depth_image_proc/depth_traits.h>
+
 using namespace std;
+
+using depth_image_proc::DepthTraits;
 
 namespace velodyne_puck_decoder {
 VelodynePuckDecoder::VelodynePuckDecoder(
@@ -55,7 +59,7 @@ bool VelodynePuckDecoder::createRosIO() {
 
   // RCK
   reflectivity_image_pub = it.advertise("velodyne/reflectivity_image", 10);
-  
+  depth_image_pub = it.advertise("velodyne/depth_image", 10);
   
   return true;
 
@@ -145,6 +149,27 @@ void VelodynePuckDecoder::publishReflectivityImage() {
   reflectivity_image_pub.publish(msg);
   
   return;
+}
+
+// RCK
+void VelodynePuckDecoder::publishDepthImage() {
+  cv::Mat depth_img = cv::Mat(16, 360, CV_16UC1, 0.0);
+
+  for (size_t i = 1; i <= 16; ++i) {
+    const velodyne_puck_msgs::VelodynePuckScan& scan = sweep_data->scans[i-1];
+    for (size_t j = 0; j < scan.points.size(); ++j) {
+      int k = (int)(scan.points[j].azimuth * RAD_TO_DEG);
+      depth_img.at<uint16_t>(16-i, (k + 180) % 360) =
+	DepthTraits<uint16_t>::fromMeters(scan.points[j].distance);
+      
+    }
+  }
+
+  sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono16",
+						 depth_img).toImageMsg();
+  msg->header.frame_id = child_frame_id;
+  depth_image_pub.publish(msg);
+  
 }
   
 void VelodynePuckDecoder::decodePacket(const RawPacket* packet) {
@@ -321,6 +346,7 @@ void VelodynePuckDecoder::packetCallback(
     if (publish_point_cloud) {
       publishPointCloud();
       publishReflectivityImage(); // RCK
+      publishDepthImage();
     }
     
     sweep_data = velodyne_puck_msgs::VelodynePuckSweepPtr(

@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   velodyne_puck_msgs
   image_transport
   cv_bridge
+  compressed_depth_image_transport
 )
 find_package(Boost REQUIRED)
 
@@ -21,7 +22,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES velodyne_puck_decoder
   CATKIN_DEPENDS
-    roscpp nodelet sensor_msgs pluginlib image_transport cv_bridge
+    roscpp nodelet sensor_msgs pluginlib image_transport cv_bridge compressed_depth_image_transport
     pcl_ros pcl_conversions
     velodyne_puck_msgs
   DEPENDS
